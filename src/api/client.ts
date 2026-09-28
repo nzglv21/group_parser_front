@@ -6,7 +6,15 @@ const ADMIN_USERNAME_KEY = 'group_parser_admin_username';
 const ADMIN_PASSWORD_KEY = 'group_parser_admin_password';
 
 export const getStoredBaseUrl = (): string => {
-  return localStorage.getItem(API_BASE_URL_KEY) || '';
+  const stored = localStorage.getItem(API_BASE_URL_KEY);
+  if (stored && stored.trim()) {
+    return stored.trim().replace(/\/+$/, '');
+  }
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
+    return envUrl.trim().replace(/\/+$/, '');
+  }
+  return '';
 };
 
 export const setStoredBaseUrl = (url: string) => {
