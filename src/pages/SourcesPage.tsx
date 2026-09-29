@@ -56,9 +56,12 @@ export const SourcesPage: React.FC = () => {
         is_active: activeFilter === 'all' ? undefined : activeFilter === 'active',
         search: search.trim() || undefined,
       });
-      setSources(data);
-    } catch {
+      const list = Array.isArray(data) ? data : (Array.isArray((data as any)?.items) ? (data as any).items : []);
+      setSources(list);
+    } catch (err) {
+      console.error('[SourcesPage] Failed to fetch sources:', err);
       message.error('Не удалось загрузить источники');
+      setSources([]);
     } finally {
       setLoading(false);
     }
@@ -73,9 +76,10 @@ export const SourcesPage: React.FC = () => {
       const updated = await sourcesApi.toggleSource(source.id);
       message.success(`Источник "${source.name}" ${updated.is_active ? 'включен' : 'отключен'}`);
       setSources((prev) =>
-        prev.map((s) => (s.id === source.id ? { ...s, is_active: updated.is_active } : s))
+        (Array.isArray(prev) ? prev : []).map((s) => (s.id === source.id ? { ...s, is_active: updated.is_active } : s))
       );
-    } catch {
+    } catch (err) {
+      console.error(`[SourcesPage] Failed to toggle source #${source.id}:`, err);
       message.error('Ошибка изменения статуса источника');
     }
   };
@@ -84,8 +88,9 @@ export const SourcesPage: React.FC = () => {
     try {
       await sourcesApi.deleteSource(id);
       message.success('Источник удален');
-      setSources((prev) => prev.filter((s) => s.id !== id));
-    } catch {
+      setSources((prev) => (Array.isArray(prev) ? prev.filter((s) => s.id !== id) : []));
+    } catch (err) {
+      console.error(`[SourcesPage] Failed to delete source #${id}:`, err);
       message.error('Ошибка при удалении источника');
     }
   };
@@ -99,6 +104,7 @@ export const SourcesPage: React.FC = () => {
       byUrlForm.resetFields();
       fetchSources();
     } catch (err: any) {
+      console.error('[SourcesPage] Failed to create source by URL:', err);
       message.error(err.response?.data?.detail || 'Не удалось распознать группу по ссылке');
     } finally {
       setSubmitting(false);
@@ -128,6 +134,7 @@ export const SourcesPage: React.FC = () => {
       manualForm.resetFields();
       fetchSources();
     } catch (err: any) {
+      console.error('[SourcesPage] Failed to save source manually:', err);
       message.error(err.response?.data?.detail || 'Ошибка сохранения источника');
     } finally {
       setSubmitting(false);

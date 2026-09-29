@@ -40,6 +40,7 @@ export const SettingsPage: React.FC = () => {
       setTestResult(res);
       message.success('Диагностика успешно выполнена');
     } catch (err: any) {
+      console.error('[SettingsPage] Diagnostics error:', err);
       setTestResult(null);
       setTestError(err.message || 'Ошибка подключения к серверу');
       message.error('Сбой проверки подключения');

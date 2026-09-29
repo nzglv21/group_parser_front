@@ -56,20 +56,22 @@ export const TripsPage: React.FC = () => {
   const fetchTrips = async () => {
     setLoading(true);
     try {
+      let data: Trip[] = [];
       if (fromCity.trim() || toCity.trim() || selectedDate) {
-        const data = await tripsApi.searchTrips({
+        data = await tripsApi.searchTrips({
           from_city: fromCity.trim() || undefined,
           to_city: toCity.trim() || undefined,
           date: selectedDate ? selectedDate.format('YYYY-MM-DD') : undefined,
           include_completed: includeCompleted,
         });
-        setTrips(data);
       } else {
-        const data = await tripsApi.getTrips(includeCompleted);
-        setTrips(data);
+        data = await tripsApi.getTrips(includeCompleted);
       }
-    } catch {
+      setTrips(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('[TripsPage] Failed to fetch trips:', err);
       message.error('Не удалось загрузить поездки');
+      setTrips([]);
     } finally {
       setLoading(false);
     }
@@ -83,11 +85,12 @@ export const TripsPage: React.FC = () => {
     try {
       await tripsApi.deleteTrip(id);
       message.success(`Поездка #${id} удалена`);
-      setTrips((prev) => prev.filter((t) => t.id !== id));
+      setTrips((prev) => (Array.isArray(prev) ? prev.filter((t) => t.id !== id) : []));
       if (currentTrip?.id === id) {
         setDetailModalOpen(false);
       }
-    } catch {
+    } catch (err) {
+      console.error(`[TripsPage] Failed to delete trip #${id}:`, err);
       message.error('Ошибка при удалении поездки');
     }
   };
@@ -101,7 +104,9 @@ export const TripsPage: React.FC = () => {
     fetchTrips();
   };
 
-  const filteredTrips = trips.filter((trip) => {
+  const safeTrips = Array.isArray(trips) ? trips : [];
+  const filteredTrips = safeTrips.filter((trip) => {
+    if (!trip) return false;
     if (platformFilter !== 'all') {
       const p = (trip.platform_name || '').toLowerCase();
       if (platformFilter === 'telegram' && !p.includes('tg') && !p.includes('tele')) return false;

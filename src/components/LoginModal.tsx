@@ -31,6 +31,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess
       onSuccess();
       onClose();
     } catch (err: any) {
+      console.error('[LoginModal] Authorization check error:', err);
       if (err.response?.status === 401) {
         message.error('Неверный логин или пароль администратора');
       } else {

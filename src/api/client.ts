@@ -45,6 +45,7 @@ export const apiClient = axios.create({
   baseURL: getStoredBaseUrl() || '',
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
   },
   timeout: 15000,
 });
@@ -55,14 +56,20 @@ export const updateApiBaseUrl = (newUrl: string) => {
 };
 
 // Request interceptor: add Basic Auth header
-apiClient.interceptors.request.use((config) => {
-  const { username, password } = getStoredCredentials();
-  if (username && password) {
-    const encoded = btoa(`${username}:${password}`);
-    config.headers.Authorization = `Basic ${encoded}`;
+apiClient.interceptors.request.use(
+  (config) => {
+    const { username, password } = getStoredCredentials();
+    if (username && password) {
+      const encoded = btoa(`${username}:${password}`);
+      config.headers.Authorization = `Basic ${encoded}`;
+    }
+    return config;
+  },
+  (error) => {
+    console.error('[API Request Setup Error]', error);
+    return Promise.reject(error);
   }
-  return config;
-});
+);
 
 // Event listener for 401 Unauthorized
 type AuthErrorListener = () => void;
@@ -78,17 +85,52 @@ export const onAuthError = (fn: AuthErrorListener) => {
 
 // Response interceptor
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Detect unexpected HTML responses (e.g., SPA index.html fallback for wrong URL or reverse proxy error)
+    if (
+      typeof response.data === 'string' &&
+      (response.data.trim().startsWith('<!DOCTYPE html>') || response.data.trim().startsWith('<html'))
+    ) {
+      const url = `${response.config.baseURL || ''}${response.config.url || ''}`;
+      const msg = `[API Error] Получен HTML вместо JSON при запросе: ${response.config.method?.toUpperCase()} ${url}`;
+      console.error(msg, {
+        url,
+        method: response.config.method?.toUpperCase(),
+        dataPreview: response.data.slice(0, 300),
+      });
+      message.error('Ошибка сервера: получен некорректный ответ (HTML)');
+      return Promise.reject(new Error(msg));
+    }
+    return response;
+  },
   (error) => {
-    if (error.response?.status === 401) {
+    const method = error.config?.method?.toUpperCase() || 'REQUEST';
+    const url = `${error.config?.baseURL || ''}${error.config?.url || ''}`;
+    const status = error.response?.status;
+    const responseData = error.response?.data;
+
+    // Detailed console output for debugging request errors
+    console.error(`[API Request Error] ${method} ${url}`, {
+      status,
+      statusText: error.response?.statusText,
+      message: error.message,
+      data: responseData,
+      headers: error.response?.headers,
+      config: error.config,
+    });
+
+    if (status === 401) {
       authErrorListeners.forEach((listener) => listener());
-    } else if (error.response?.status === 404) {
+    } else if (status === 404) {
       // Handled in callers
-    } else if (error.response?.data?.detail) {
-      const detail = error.response.data.detail;
+    } else if (responseData?.detail) {
+      const detail = responseData.detail;
       const errorMsg = typeof detail === 'string' ? detail : JSON.stringify(detail);
       message.error(errorMsg);
+    } else if (error.message) {
+      message.error(`Ошибка сети или сервера: ${error.message}`);
     }
+
     return Promise.reject(error);
   }
 );

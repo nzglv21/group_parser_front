@@ -38,13 +38,17 @@ export const DashboardPage: React.FC = () => {
       if (overviewData.status === 'fulfilled') {
         setOverview(overviewData.value);
       } else {
+        console.error('[DashboardPage] Failed to fetch analytics overview:', overviewData.reason);
         setErrorMsg('Не удалось загрузить аналитику. Проверьте Basic Auth (nzglv / nzglv).');
       }
 
       if (healthData.status === 'fulfilled') {
         setHealth(healthData.value);
+      } else {
+        console.error('[DashboardPage] Failed to check health:', healthData.reason);
       }
     } catch (err: any) {
+      console.error('[DashboardPage] Error loading dashboard data:', err);
       setErrorMsg(err.message || 'Ошибка загрузки дашборда');
     } finally {
       setLoading(false);
@@ -74,9 +78,15 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
-  const tripsTimeline: TimelineDayItem[] = overview?.trips_status_timeline?.timeline || [];
-  const topSearchRoutes: TopRouteItem[] = overview?.searches?.top_search_routes || [];
-  const topDriverRoutes: TopRouteItem[] = overview?.trips?.top_driver_routes || [];
+  const tripsTimeline: TimelineDayItem[] = Array.isArray(overview?.trips_status_timeline?.timeline)
+    ? overview.trips_status_timeline.timeline
+    : [];
+  const topSearchRoutes: TopRouteItem[] = Array.isArray(overview?.searches?.top_search_routes)
+    ? overview.searches.top_search_routes
+    : [];
+  const topDriverRoutes: TopRouteItem[] = Array.isArray(overview?.trips?.top_driver_routes)
+    ? overview.trips.top_driver_routes
+    : [];
 
   const activeTripsCount = overview?.trips?.trips_by_status?.active ?? 0;
   const totalTripsCount = overview?.trips?.total_trips ?? 0;

@@ -50,10 +50,17 @@ export const DistancesPage: React.FC = () => {
     setLoading(true);
     try {
       const data = await distancesApi.getDistances();
-      setDistances(data.items);
-      setUnconfiguredCount(data.unconfigured_count);
-    } catch {
+      const items = Array.isArray(data?.items) ? data.items : (Array.isArray(data) ? data : []);
+      setDistances(items);
+      setUnconfiguredCount(
+        typeof data?.unconfigured_count === 'number'
+          ? data.unconfigured_count
+          : items.filter((d) => (d.duration_minutes || 0) === 0).length
+      );
+    } catch (err) {
+      console.error('[DistancesPage] Failed to fetch distances:', err);
       message.error('Не удалось загрузить расстояния');
+      setDistances([]);
     } finally {
       setLoading(false);
     }
@@ -76,6 +83,7 @@ export const DistancesPage: React.FC = () => {
       addForm.resetFields();
       fetchDistances();
     } catch (err: any) {
+      console.error('[DistancesPage] Failed to save distance:', err);
       message.error(err.response?.data?.detail || 'Ошибка сохранения');
     } finally {
       setSubmitting(false);
@@ -94,6 +102,7 @@ export const DistancesPage: React.FC = () => {
       setCurrentEditItem(null);
       fetchDistances();
     } catch (err: any) {
+      console.error(`[DistancesPage] Failed to update distance #${currentEditItem.id}:`, err);
       message.error(err.response?.data?.detail || 'Ошибка обновления времени');
     } finally {
       setSubmitting(false);
@@ -104,8 +113,9 @@ export const DistancesPage: React.FC = () => {
     try {
       await distancesApi.deleteDistance(id);
       message.success('Запись удалена');
-      setDistances((prev) => prev.filter((d) => d.id !== id));
-    } catch {
+      setDistances((prev) => (Array.isArray(prev) ? prev.filter((d) => d.id !== id) : []));
+    } catch (err) {
+      console.error(`[DistancesPage] Failed to delete distance #${id}:`, err);
       message.error('Ошибка при удалении записи');
     }
   };
@@ -118,7 +128,9 @@ export const DistancesPage: React.FC = () => {
     setEditModalOpen(true);
   };
 
-  const filteredDistances = distances.filter((item) => {
+  const safeDistances = Array.isArray(distances) ? distances : [];
+  const filteredDistances = safeDistances.filter((item) => {
+    if (!item) return false;
     if (filterMode === 'unconfigured' && item.duration_minutes > 0) {
       return false;
     }

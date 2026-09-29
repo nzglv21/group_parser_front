@@ -44,10 +44,12 @@ export const SearchesPage: React.FC = () => {
         only_success: onlySuccess ? true : undefined,
         only_empty: onlyEmpty ? true : undefined,
       });
-      setLogs(data.searches || []);
-      setTotal(data.total_count || 0);
-    } catch {
+      setLogs(Array.isArray(data?.searches) ? data.searches : (Array.isArray(data) ? data : []));
+      setTotal(typeof data?.total_count === 'number' ? data.total_count : 0);
+    } catch (err) {
+      console.error('[SearchesPage] Failed to fetch search logs:', err);
       message.error('Не удалось загрузить логи поиска');
+      setLogs([]);
     } finally {
       setLoading(false);
     }

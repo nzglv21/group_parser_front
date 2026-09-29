@@ -57,11 +57,13 @@ export const DriversPage: React.FC = () => {
         platform: platformFilter !== 'all' ? platformFilter : undefined,
         search: search.trim() || undefined,
       });
-      setDrivers(data.items);
-      setStats(data.stats);
-      setTopDrivers(data.top_drivers);
-    } catch {
+      setDrivers(Array.isArray(data?.items) ? data.items : (Array.isArray(data) ? data : []));
+      setStats(data?.stats || null);
+      setTopDrivers(Array.isArray(data?.top_drivers) ? data.top_drivers : []);
+    } catch (err) {
+      console.error('[DriversPage] Failed to fetch drivers:', err);
       message.error('Не удалось загрузить данные водителей');
+      setDrivers([]);
     } finally {
       setLoading(false);
     }
@@ -77,9 +79,11 @@ export const DriversPage: React.FC = () => {
     setTripsLoading(true);
     try {
       const res = await driversApi.getDriverTrips(driver.driver_id, driver.platform);
-      setDriverTrips(res.trips);
-    } catch {
+      setDriverTrips(Array.isArray(res?.trips) ? res.trips : (Array.isArray(res) ? res : []));
+    } catch (err) {
+      console.error(`[DriversPage] Failed to fetch driver trips for #${driver.driver_id}:`, err);
       message.error('Ошибка загрузки поездок водителя');
+      setDriverTrips([]);
     } finally {
       setTripsLoading(false);
     }

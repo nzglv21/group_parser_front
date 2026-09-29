@@ -38,10 +38,12 @@ export const UsersPage: React.FC = () => {
         offset: (currentPage - 1) * currentSize,
         search: search.trim() || undefined,
       });
-      setUsers(data.users || []);
-      setTotal(data.total_count || 0);
-    } catch {
+      setUsers(Array.isArray(data?.users) ? data.users : (Array.isArray(data) ? data : []));
+      setTotal(typeof data?.total_count === 'number' ? data.total_count : 0);
+    } catch (err) {
+      console.error('[UsersPage] Failed to fetch users list:', err);
       message.error('Не удалось загрузить список пользователей');
+      setUsers([]);
     } finally {
       setLoading(false);
     }
