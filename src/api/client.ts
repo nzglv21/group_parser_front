@@ -5,6 +5,8 @@ const API_BASE_URL_KEY = 'group_parser_api_base_url';
 const ADMIN_USERNAME_KEY = 'group_parser_admin_username';
 const ADMIN_PASSWORD_KEY = 'group_parser_admin_password';
 
+export const BACKEND_URL = 'http://5.129.238.27:8000';
+
 export const getStoredBaseUrl = (): string => {
   const stored = localStorage.getItem(API_BASE_URL_KEY);
   if (stored && stored.trim()) {
@@ -14,7 +16,7 @@ export const getStoredBaseUrl = (): string => {
   if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
     return envUrl.trim().replace(/\/+$/, '');
   }
-  return '';
+  return BACKEND_URL;
 };
 
 export const setStoredBaseUrl = (url: string) => {
@@ -42,12 +44,12 @@ export const clearStoredCredentials = () => {
 };
 
 export const apiClient = axios.create({
-  baseURL: getStoredBaseUrl() || '',
+  baseURL: getStoredBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
-  timeout: 15000,
+  timeout: 30000,
 });
 
 export const updateApiBaseUrl = (newUrl: string) => {
@@ -85,24 +87,7 @@ export const onAuthError = (fn: AuthErrorListener) => {
 
 // Response interceptor
 apiClient.interceptors.response.use(
-  (response) => {
-    // Detect unexpected HTML responses (e.g., SPA index.html fallback for wrong URL or reverse proxy error)
-    if (
-      typeof response.data === 'string' &&
-      (response.data.trim().startsWith('<!DOCTYPE html>') || response.data.trim().startsWith('<html'))
-    ) {
-      const url = `${response.config.baseURL || ''}${response.config.url || ''}`;
-      const msg = `[API Error] Получен HTML вместо JSON при запросе: ${response.config.method?.toUpperCase()} ${url}`;
-      console.error(msg, {
-        url,
-        method: response.config.method?.toUpperCase(),
-        dataPreview: response.data.slice(0, 300),
-      });
-      message.error('Ошибка сервера: получен некорректный ответ (HTML)');
-      return Promise.reject(new Error(msg));
-    }
-    return response;
-  },
+  (response) => response,
   (error) => {
     const method = error.config?.method?.toUpperCase() || 'REQUEST';
     const url = `${error.config?.baseURL || ''}${error.config?.url || ''}`;
